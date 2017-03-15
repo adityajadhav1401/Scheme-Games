@@ -1,0 +1,162 @@
+#lang racket/gui
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; SNAKE CODE
+
+
+
+; FRAME SIZE
+(define BLOCK-WIDTH 53)
+(define BLOCK-HEIGHT 32)
+; PIXEL SIZE
+(define BLOCK-SIZE 15)
+(define fruit (list 10 11))
+(define points 0)
+(define snake (list (list 5 1) (list 4 1)))
+(define direction 'r)
+
+; The Bitmaps of all the images used.
+(define background-bitmap (make-object bitmap% "Background.jpg"))
+
+; Move-block: integer -> list
+; Objective: removes the last element from the list and adds a new one at the beginning of it
+(define (move-block x y) 
+  (reverse (append (cdr (reverse snake)) (list(list x y)))))
+
+; Objective: takes the element in the position index of the first element of the list
+(define (handle position lst)
+  (list-ref (list-ref lst 0) position))
+
+; Objective: Draw a block on the given drawing object
+; The color argument can be a string or a color object
+
+(define (draw-block screen x y color) 
+  (send screen set-brush color 'solid)
+  (send screen draw-ellipse (* x BLOCK-SIZE) (* y BLOCK-SIZE) BLOCK-SIZE BLOCK-SIZE))
+
+; Objective: moves the snake to the given position ('l,' r, 'u or' d)
+; set! used to update
+(define (move-snake position)
+  (case position
+    ['l (set! snake (move-block (- (handle 0 snake) 1) (handle 1 snake)))]
+    ['r (set! snake (move-block (+ (handle 0 snake) 1) (handle 1 snake)))]
+    ['u (set! snake (move-block (handle 0 snake) (- (handle 1 snake) 1)))]
+    ['d (set! snake (move-block (handle 0 snake) (+ (handle 1 snake) 1)))]))
+
+; Set-list: list list [number] [number] -> bool
+; Objective: check if the list of points fruit is in the snake list
+; G is the exclusion index
+(define (press-against snake bloco [i 0] [g 666]) 
+    (if (> (length snake) i)  ; length (snake) > i
+      (if (and (not (= g i)) (and 
+                              (eq? (list-ref (list-ref snake i) 0) (list-ref bloco 0)) ; check for x and y
+                              (eq? (list-ref (list-ref snake i) 1) (list-ref bloco 1)))) 
+          #t
+          (press-against snake bloco (+ i 1) g))
+      #f))
+
+
+; Grow-snake: -> void
+; Objective: to make a snake grow, to copy the last element of the snake list, moving a snake to another position
+; And added to the last element I previously hit
+
+(define grow-snake (lambda () 
+                     (define x (car (reverse snake)))
+                     (set! fruit (list (inexact->exact (round (* (random) (- BLOCK-WIDTH 1)))) (inexact->exact (round (* (random) (- BLOCK-HEIGHT 1)))) ))
+                     (move-snake direction)
+                     (set! points (add1 points))
+                     (set! snake (append snake (list x)))))
+
+; restart: ->void
+; Target: arrow all variables to the original state
+(define restart (lambda()
+  (set! direction 'r)
+  (set! fruit (list 10 10))
+  (set! snake (list (list 2 1) (list 1 1)))
+  (set! points 0)
+))
+
+; Creates the window for the snake
+(define snake-frame (new frame% 
+  [label "SNAKE"]
+  [width (+ (* BLOCK-WIDTH BLOCK-SIZE) 11)]
+  [height (+ (* BLOCK-HEIGHT BLOCK-SIZE) 29)]
+  [style (list 'no-resize-border)]))
+
+; canvas-key: -> canvas%
+(define (canvas-key frame) (class canvas%
+  (define/override (on-char key-event)
+    (cond ; todo: in_list? -> set direction
+      [(eq? (send key-event get-key-code) 'left) (if (eq? direction 'r)
+                                                     (set! direction 'r)
+                                                     (set! direction 'l))]
+      [(eq? (send key-event get-key-code) 'right) (if (eq? direction 'l)
+                                                     (set! direction 'l)
+                                                     (set! direction 'r))]
+      [(eq? (send key-event get-key-code) 'up) (if (eq? direction 'd)
+                                                     (set! direction 'd)
+                                                     (set! direction 'u))]
+      [(eq? (send key-event get-key-code) 'down) (if (eq? direction 'u)
+                                                     (set! direction 'u)
+                                                     (set! direction 'd))]
+      [(eq? (send key-event get-key-code) '#\r) (restart)]))
+  (super-new [parent frame])))
+
+
+; Update-snake: -> void
+; Objective: functions for screen updating and snake movement
+(define update-snake (lambda () 
+  (draw-block dc (list-ref fruit 0) (list-ref fruit 1) "pink") ; Draw the fruit
+  (cond [(press-against snake fruit) (grow-snake)]
+        [else (move-snake direction)]) ; check by collision with fruit
+  (send dc draw-text "SCORE" (-(* BLOCK-WIDTH BLOCK-SIZE) 90) 10)                     
+  (send dc draw-text (number->string points) (-(* BLOCK-WIDTH BLOCK-SIZE) 50) 30)
+                       
+  (for ([block snake]) 
+    (if (eq? block (car snake)) 
+      (draw-block dc (list-ref block 0) (list-ref block 1) "lightgreen") 
+      (draw-block dc (list-ref block 0) (list-ref block 1) "lightgreen")))
+                       
+                       ))
+
+
+; Lost-the-gaem: -> void
+; Objective: events that occur while losing the game
+(define lost-the-game (lambda ()
+  (send dc draw-text "YOU LOSE" (- (round (/ (* BLOCK-WIDTH BLOCK-SIZE) 2)) 50) (- (round (/ (* BLOCK-HEIGHT BLOCK-SIZE) 2)) 20))
+  (send dc draw-text "To restart press 'R'" (- (round (/ (* BLOCK-WIDTH BLOCK-SIZE) 2)) 100) (- (round (/ (* BLOCK-HEIGHT BLOCK-SIZE) 2)) 0))
+))
+
+; Instance canvas
+(define canvas (
+  new (canvas-key snake-frame)))
+
+; drawing canvas
+(define dc (send canvas get-dc))
+
+; Set a font
+(send dc set-font (make-object font% 14 'system 'normal 'bold))
+(send dc set-text-foreground "white")
+
+
+
+; Loop with collisions and frames
+(define timer-snake (new timer%
+  [notify-callback (lambda()
+    (send dc clear)
+    (send dc set-brush "white" 'transparent)
+    (send dc draw-bitmap background-bitmap 0 0)            
+    (define collision #f)
+    (for ([block snake]
+         [j (in-naturals 0)])
+      (cond 
+            [(or (> (list-ref block 0) BLOCK-WIDTH) (> 0 (list-ref block 0))) (set! collision #t )]
+            [(or (> (list-ref block 1) BLOCK-HEIGHT) (> 0 (list-ref block 1))) (set! collision #t)]
+            [(eq? #f collision) (set! collision (eq? #t (press-against snake block 0 j)))]))
+    (if collision (lost-the-game) (update-snake)))]
+  [interval #f]))
+
+(send snake-frame show #t)
+(send timer-snake start 70)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
