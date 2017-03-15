@@ -1,0 +1,192 @@
+#lang racket/gui
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; TTT CODE
+; GUI CODE
+(define TTT-frame (new frame%
+                       [label "TIC-TAC-TOE"]
+                       [width 805]
+                       [height 508]
+                       [style (list 'no-resize-border)]))
+(define (click event xl xr yu yd)
+  (and (eq? (send event get-event-type) 'left-down) (<= (send event get-x) xr)
+       (> (send event get-x) xl) (> (send event get-y) yu) (<= (send event get-y) yd)))
+(define k 0)
+
+(define color "red")
+
+(define TTT-background (make-object bitmap% "TTT.jpg"))
+(define (canvas-key-TTT frame) (class canvas%                     
+  (define/override (on-event mouse-event)
+    
+    (cond 
+      [(and (click mouse-event 120 215 100 180) (C 0)) (begin
+                                                         (set! initial-board (set-move initial-board 0 H-player))
+                                                         (set! initial-board (move initial-board))
+                                                         (display initial-board))]
+      [(and (click mouse-event 215 355 100 180) (C 1)) (begin
+                                                         (set! initial-board (set-move initial-board 1 H-player))
+                                                         (set! initial-board (move initial-board))
+                                                         (display initial-board))]
+      [(and (click mouse-event 355 455 100 180) (C 2)) (begin
+                                                         (set! initial-board (set-move initial-board 2 H-player))
+                                                         (set! initial-board (move initial-board))
+                                                         (display initial-board))]
+      [(and (click mouse-event 120 215 210 290) (C 3)) (begin
+                                                         (set! initial-board (set-move initial-board 3 H-player))
+                                                         (set! initial-board (move initial-board))
+                                                         (display initial-board))]
+      [(and (click mouse-event 215 355 210 290) (C 4)) (begin
+                                                         (set! initial-board (set-move initial-board 4 H-player))
+                                                         (set! initial-board (move initial-board))
+                                                         (display initial-board))]
+      [(and (click mouse-event 355 455 210 290) (C 5)) (begin
+                                                         (set! initial-board (set-move initial-board 5 H-player))
+                                                         (set! initial-board (move initial-board))
+                                                         (display initial-board))]
+      [(and (click mouse-event 120 215 320 400) (C 6)) (begin
+                                                         (set! initial-board (set-move initial-board 6 H-player))
+                                                         (set! initial-board (move initial-board))
+                                                         (display initial-board))]
+      [(and (click mouse-event 215 355 320 400) (C 7)) (begin
+                                                         (set! initial-board (set-move initial-board 7 H-player))
+                                                         (set! initial-board (move initial-board))
+                                                         (display initial-board))]
+      [(and (click mouse-event 355 455 320 400) (C 8)) (begin
+                                                         (set! initial-board (set-move initial-board 8 H-player))
+                                                         (set! initial-board (move initial-board))
+                                                         (display initial-board))]))
+  (super-new [parent frame])))
+(define (C i)
+  (eq? (cdr (list-ref initial-board i)) "K"))
+(define TTT-canvas (new (canvas-key-TTT TTT-frame)
+                     [style (list 'transparent)]
+                     [paint-callback (lambda (event dc)
+                                       [send dc draw-bitmap TTT-background 0 0])]))
+(define dc-TTT (send TTT-canvas get-dc))
+(send dc-TTT set-font (make-object font% 40 'system 'normal 'bold))
+(send dc-TTT set-text-foreground "white")
+(send dc-TTT draw-text "SCORE" 50 50)
+(define win 0)
+(define lose 0)
+(define (display board)
+  (send dc-TTT clear)
+  (send dc-TTT set-text-foreground "white")
+  (send dc-TTT draw-bitmap TTT-background 0 0)
+  (send dc-TTT draw-text (number->string win) 675 120)
+  (send dc-TTT draw-text (number->string lose) 675 300)
+  (cond [(check-victory initial-board AI-player) (begin
+                                                     (set! initial-board initial-board1)
+                                                     (set! lose (+ 1 lose))
+                                                     (send dc-TTT set-text-foreground "black")
+                                                     (send dc-TTT set-font (make-object font% 40 'system 'normal 'bold #f 'smoothed))
+                                                     (send dc-TTT draw-text "YOU LOSE" 150 210))]
+          [(check-victory initial-board H-player) (begin
+                                                    (set! initial-board initial-board1)
+                                                    (set! win (+ 1 win))
+                                                    (send dc-TTT set-text-foreground "black")
+                                                    (send dc-TTT set-font (make-object font% 40 'system 'normal 'bold #f 'smoothed))
+                                                    (send dc-TTT draw-text "YOU WIN" 190 210))]
+          [(check-draw initial-board H-player) (begin
+                                                 (set! initial-board initial-board1)
+                                                 (send dc-TTT set-text-foreground "black")
+                                                 (send dc-TTT set-font (make-object font% 40 'system 'normal 'bold #f 'smoothed))
+                                                 (send dc-TTT draw-text "DRAW" 200 210))]
+          [else (for ([i board])
+                  (cond 
+                    [(eq? (cdr i) "K") (send dc-TTT draw-text "." 500 500)]
+                    [(eq? 0 (car i)) (send dc-TTT draw-text (cdr i) 150 100)]
+                    [(eq? 1 (car i)) (send dc-TTT draw-text (cdr i) 270 100)]
+                    [(eq? 2 (car i)) (send dc-TTT draw-text (cdr i) 390 100)]
+                    [(eq? 3 (car i)) (send dc-TTT draw-text (cdr i) 150 210)]
+                    [(eq? 4 (car i)) (send dc-TTT draw-text (cdr i) 270 210)]
+                    [(eq? 5 (car i)) (send dc-TTT draw-text (cdr i) 390 210)]
+                    [(eq? 6 (car i)) (send dc-TTT draw-text (cdr i) 150 320)]
+                    [(eq? 7 (car i)) (send dc-TTT draw-text (cdr i) 270 320)]
+                    [(eq? 8 (car i)) (send dc-TTT draw-text (cdr i) 390 320)]))]))
+  
+  
+  
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; AI CODE
+(define initial-board (list (cons 0 "K") (cons 1 "K") (cons 2 "K")
+                        (cons 3 "K") (cons 4 "K") (cons 5 "K") 
+                        (cons 6 "K") (cons 7 "K") (cons 8 "K")))
+(define initial-board1 (list (cons 0 "K") (cons 1 "K") (cons 2 "K")
+                        (cons 3 "K") (cons 4 "K") (cons 5 "K") 
+                        (cons 6 "K") (cons 7 "K") (cons 8 "K")))
+(define AI-player "O")
+(define H-player "X")
+(define win-list '((0 1 2) (3 4 5) (6 7 8) (0 3 6) (1 4 7) (2 5 8) (0 4 8) (2 4 6)))
+
+(define (helper1 l ans)
+        (if (null? l)
+            ans
+            (helper1 (cdr l) (if (eq? (cdr (car l)) "P")
+                                 ans
+                                 (max ans (cdr (car l)))))))
+(define (helper2 l ans)
+        (if (null? l)
+            ans
+            (helper2 (cdr l) (if (eq? (cdr (car l)) "P")
+                                 ans
+                                 (min ans (cdr (car l)))))))
+(define (best-score board player)      
+  (if (eq? player H-player)
+      (helper1 board -500)
+      (helper2 board 500)))
+
+(define (next-player player)
+  (if (eq? player AI-player)
+      H-player
+      AI-player))
+
+(define (pos-score board player)
+  (cond [(check-victory board AI-player) (cons (cons "A" +10) '())]
+        [(check-victory board H-player) (cons (cons "A" -10) '())]
+        [(check-draw board player) (cons (cons "A" 0) '())]
+        [else (map (lambda (x) (if(eq? "K" (cdr x))
+                                  (cons (car x) (best-score (pos-score (set-move board (car x) player) (next-player player)) player))
+                                  (cons (car x) "P"))) board)]))
+
+(define (move board)
+  (define list (pos-score board AI-player))
+  (define (helper l posn max-score)
+    (if (null? l)
+        (set-move board posn AI-player)
+        (if (eq? "P" (cdr (car l)))
+            (helper (cdr l) posn max-score)
+            (if (>= (cdr (car l)) max-score)
+                (helper (cdr l) (car (car l)) (cdr (car l)))
+                (helper (cdr l) posn max-score)))))
+  (helper list 0 -100))
+
+
+   
+(define (check-victory board player)
+  (define (check board l sym)
+    (if (and (eq? sym (cdr (list-ref board (car l))))
+             (eq? sym (cdr (list-ref board (cadr l))))
+             (eq? sym (cdr (list-ref board (caddr l)))))
+        #t
+        #f))
+  (if (eq? player H-player)
+      (foldr (lambda (x y) (or y (check board x "X"))) #f win-list)
+      (foldr (lambda (x y) (or y (check board x "O"))) #f win-list)))
+
+(define (check-draw board player)
+  (and (not (check-victory board player)) (foldr (lambda (x y) (and (not (eq? (cdr x) "K")) y)) #t board)))
+(define (set-move board i player)
+  (define (helper board ctr)
+    (if (null? board)
+        '()
+        (if (eq? ctr i)
+            (cons (cons i player) (helper (cdr board) (+ 1 ctr)))
+            (cons (car board) (helper (cdr board) (+ 1 ctr))))))
+  (helper board 0))
+
+
+(send TTT-frame show #t)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
